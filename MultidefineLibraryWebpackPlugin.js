@@ -55,8 +55,15 @@ class MultidefineLibraryWebpacklugin {
     let expose = this.exposeList[modulePath];
     if (!expose) { return; }
 
+    let isAMD = module._source._value.indexOf('define(') !== -1;
+    let isCommonJS = module._source._value.indexOf('module.exports') !== -1 && !isAMD;
+
     if (!expose.type) {
-      expose.type = 'commonjs';
+      expose.type = isCommonJS ? 'commonjs' : 'amd';
+    } else if ((expose.type === 'commonjs') !== isCommonJS) {
+      console.warn(`Provided module type does not match auto-detection result for module ${expose.name}`);
+      console.warn('provided', expose.type);
+      console.warn('detected', isCommonJS ? 'commonjs' : 'amd');
     }
 
     if (!DEFINE_EXPORTS_VALUES[expose.type]) {
