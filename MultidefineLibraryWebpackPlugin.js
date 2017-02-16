@@ -6,16 +6,30 @@ const DEFINE_EXPORTS_VALUES = {
 };
 
 class MultidefineLibraryWebpacklugin {
-  constructor (targets) {
-    if (!Array.isArray(targets)) { throw new Error('Array of targets should be provided'); }
+  constructor (exposeList) {
+    if (!exposeList) {
+      throw new Error('List of modules to expose should be provided');
+    }
 
-    this.targets = targets.reduce((computedTargets, target) => {
-      let type = target.type || 'commonjs';
-      if (!DEFINE_EXPORTS_VALUES[type]) { throw new Error('Unsupported module type.'); }
+    if (Array.isArray(exposeList)) {
+      let namesIndex = {};
+      this.exposeList = exposeList.reduce((computedList, module) => {
+        if (computedList[module.path]) {
+          throw new Error('Duplicated exposed module path "' + module.path + '"');
+        }
 
-      computedTargets[target.path] = {name: target.name, type};
-      return computedTargets;
-    }, {});
+        if (namesIndex[module.name]) {
+          throw new Error('Conflict on exposed module name "' + module.name + '"');
+        }
+
+        namesIndex[module.name] = module.name;
+        computedList[module.path] = {
+          name: module.name,
+          type: module.type
+        };
+        return computedList;
+      }, {});
+    }
   }
 
   apply (compiler) {
@@ -38,10 +52,18 @@ class MultidefineLibraryWebpacklugin {
     let modulePath = module.resource && this._getRelativePath(module.resource);
     if (!modulePath) { return; }
 
-    let target = this.targets[modulePath];
-    if (!target) { return; }
+    let expose = this.exposeList[modulePath];
+    if (!expose) { return; }
 
-    module._source._value += `\ndefine('${target.name}', function () { return ${DEFINE_EXPORTS_VALUES[target.type]}; });\n`;
+    if (!expose.type) {
+      expose.type = 'commonjs';
+    }
+
+    if (!DEFINE_EXPORTS_VALUES[expose.type]) {
+      throw new Error(`Unsupported module type "${expose.type}"`);
+    }
+
+    module._source._value += `\ndefine('${expose.name}', function () { return ${DEFINE_EXPORTS_VALUES[expose.type]}; });\n`;
   }
 }
 
