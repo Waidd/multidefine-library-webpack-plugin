@@ -97,13 +97,13 @@ class MultidefineLibraryWebpacklugin {
       throw new Error(`Unsupported module type "${moduleToExpose.type}"`);
     }
 
-    const deprecationMethodName = this.options.deprecationMethodName || 'deprecated';
+    const deprecationMethodName = this.options.deprecationMethodName;
     let deprecationCall = '';
 
-    if (exposed.deprecated) {
+    if (moduleToExpose.deprecated) {
       let deprecationMsg = `Deprecated module usage: "${moduleToExpose.name}"`;
 
-      deprecationCall+= `window.${deprecationMethodName} && ` +
+      deprecationCall += `window.${deprecationMethodName} && ` +
         `window.${deprecationMethodName}('${deprecationMsg}');`;
     }
 
@@ -117,7 +117,7 @@ class MultidefineLibraryWebpacklugin {
         const deprecationMsg = `Deprecated module alias "${alias}" used. ` +
           `Please use real module name "${moduleToExpose.name}"`;
 
-        deprecationCall+= `window.${deprecationMethodName} && ` +
+        deprecationCall += `window.${deprecationMethodName} && ` +
           `window.${deprecationMethodName}('${deprecationMsg}');`;
 
         module._source._value += `\ndefine('${alias}', function () {` +
