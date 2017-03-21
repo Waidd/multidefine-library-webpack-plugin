@@ -6,7 +6,9 @@ const DEFINE_EXPORTS_VALUES = {
 };
 
 class MultidefineLibraryWebpacklugin {
-  constructor (exposeList) {
+  constructor (exposeList, options) {
+    this.options = options || {};
+
     if (!exposeList) {
       throw new Error('List of modules to expose should be provided');
     }
@@ -22,10 +24,22 @@ class MultidefineLibraryWebpacklugin {
           throw new Error('Conflict on exposed module name "' + module.name + '"');
         }
 
+        if (module.aliases) {
+          module.aliases.forEach((alias) => {
+            if (namesIndex[alias]) {
+              throw new Error('Conflict on exposed module alias "' + alias + '"');
+            }
+
+            namesIndex[alias] = module.name;
+          });
+        }
+
         namesIndex[module.name] = module.name;
         computedList[module.path] = {
           name: module.name,
-          type: module.type
+          type: module.type,
+          aliases: module.aliases,
+          deprecated: module.deprecated
         };
         return computedList;
       }, {});
@@ -70,7 +84,35 @@ class MultidefineLibraryWebpacklugin {
       throw new Error(`Unsupported module type "${expose.type}"`);
     }
 
-    module._source._value += `\ndefine('${expose.name}', function () { return ${DEFINE_EXPORTS_VALUES[expose.type]}; });\n`;
+    const deprecationMethodName = this.options.deprecationMethodName || 'deprecated';
+    let deprecationCall = '';
+
+    if (exposed.deprecated) {
+      let deprecationMsg = `Deprecated module usage: "${expose.name}"`;
+
+      deprecationCall+= `window.${deprecationMethodName} && ` +
+        `window.${deprecationMethodName}('${deprecationMsg}');`;
+    }
+
+    module._source._value += `\ndefine('${expose.name}', function () {` +
+      ` ${deprecationCall}` +
+      ` return ${DEFINE_EXPORTS_VALUES[expose.type]};` +
+      '});\n';
+
+    if (expose.aliases) {
+      expose.aliases.forEach((alias) => {
+        const deprecationMsg = `Deprecated module alias "${alias}" used. ` +
+          `Please use real module name "${expose.name}"`;
+
+        deprecationCall+= `window.${deprecationMethodName} && ` +
+          `window.${deprecationMethodName}('${deprecationMsg}');`;
+
+        module._source._value += `\ndefine('${alias}', function () {` +
+          ` ${deprecationCall}` +
+          ` return ${DEFINE_EXPORTS_VALUES[expose.type]};` +
+          '});\n';
+      });
+    }
   }
 }
 
