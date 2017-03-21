@@ -1,6 +1,6 @@
 # Multidefine Library Webpack Plugin
 
-This <s>hack</s> plugin allow webpack 2 to bundle your code to an amd library with multiple entries in a same asset.
+This <s>hack</s> plugin allow webpack 2 to bundle your code to a named amd library with multiple entries in a same asset.
 
 ## Requirements
 
@@ -16,6 +16,8 @@ npm install multidefine-library-webpack-plugin --save
 Or add it to your package.json
 
 ## Usage
+
+### Phase 1: config
 
 Add the plugin in your `webpack.config.js`:
 
@@ -36,28 +38,19 @@ module.exports = {
       name: 'A'
     }, {
       path: 'b.js',
-      name: 'B',
-      type: 'amd'
+      name: 'B'
     }])
   ]
 };
 ```
 
-### First parameter
+###Phase 2:
 
-The plugin take an array of objects as first parameter. Each object will represent an entry point of your asset:
-```javascript
-[{
-  path: "a.js", // path to file that you want to make requireable
-  name: "A", // Define name of the module
-  [type: "amd"] // Specifiy if the origin module in in amd or commonjs, default value is commonjs
-  [aliases: ["alias1", "alias2"]] // alternate deprecated names exposed for this module
-  [deprecated: true/false] // If deprecated, a global method "deprecated" is called is this module is used
-}]
-```
-This plugin support currently only `amd` and `commonjs` source module.
+???
 
-Then you will be able to require these module:
+###Phase 3: profit
+
+Now, you can requirejs your modules:
 
 ```javascript
 require(['A', 'B'], function (A, B) {
@@ -65,7 +58,34 @@ require(['A', 'B'], function (A, B) {
 });
 ```
 
-### Second parameter
+This plugin support `amd`, `umd` and `commonjs` source module.
+
+## Configuration
+
+### First parameter: modules to expose
+
+The plugin take an array of objects as first parameter. Each object will represent an entry point of your asset:
+```json
+[{
+  path: "a.js", // path to the file that you want to make requireable
+  name: "A", // Define name of the module
+  [aliases: ["alias1", "alias2"]] // alternate deprecated names exposed for this module
+  [deprecated: true/false] // If deprecated, a global method "deprecated" is called is this module is used
+}]
+```
+
+This plugin can also take an object as parameter. Each key will represent an entry point of your asset:
+```json
+{
+  "a.js": { // path to the file that you want to make requireable 
+    name: "A", // Define name of the module
+    [aliases: ["alias1", "alias2"]] // alternate deprecated names exposed for this module
+    [deprecated: true/false] // If deprecated, a global method "deprecated" is called is this module is used
+  }
+}
+```
+
+### Second parameter: options
 
 The plugin take an options object as second parameter.
 ```javascript

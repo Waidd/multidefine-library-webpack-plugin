@@ -1,9 +1,18 @@
 'use strict';
 
-const DEFINE_EXPORTS_VALUES = {
+const EXPORTS_VALUES_BY_DEFINITION = {
   amd: '__WEBPACK_AMD_DEFINE_RESULT__',
   commonjs: 'module.exports'
 };
+
+const DEFINE_PATTERN = (name, definition, extra) =>
+`\n\ndefine('${name}', function () {\n` +
+  extra +
+` return ${EXPORTS_VALUES_BY_DEFINITION[definition]};
+});`;
+
+const DEPRECATION_PATTERN = (methodName, message) =>
+`\twindow.${methodName} && window.${methodName}('${message}');\n`;
 
 class MultidefineLibraryWebpacklugin {
   constructor (modulesToExpose, options) {
@@ -26,7 +35,17 @@ class MultidefineLibraryWebpacklugin {
     this.context = compiler.context;
     compiler.plugin('compilation', (compilation, data) => {
       compilation.plugin('after-optimize-modules', (modules) => {
-        modules.forEach(this._appendDefine.bind(this));
+        modules.forEach((module) => {
+          const modulePath = module.resource && this._getRelativePath(module.resource);
+          if (!modulePath) { return; }
+
+          const moduleToExpose = this.modulesToExpose[modulePath];
+          if (!moduleToExpose) { return; }
+
+          moduleToExpose.definition = this._detectModuleDefinition(module);
+
+          this._appendDefine(module, moduleToExpose);
+        });
       });
     });
   }
@@ -75,57 +94,41 @@ class MultidefineLibraryWebpacklugin {
     return resource;
   }
 
-  _appendDefine (module) {
-    const modulePath = module.resource && this._getRelativePath(module.resource);
-    if (!modulePath) { return; }
+  _detectModuleDefinition (module) {
+    let isAMD = module.dependencies.some((dependency) => dependency.constructor.name === 'AMDDefineDependency');
+    return isAMD ? 'amd' : 'commonjs';
+  }
 
-    const moduleToExpose = this.modulesToExpose[modulePath];
-    if (!moduleToExpose) { return; }
+  _prepareStatement (moduleToExpose, name) {
+    let extra = '';
 
-    const isAMD = module._source._value.indexOf('define(') !== -1;
-    const isCommonJS = module._source._value.indexOf('module.exports') !== -1 && !isAMD;
+    if (moduleToExpose.deprecated || moduleToExpose.name !== name) {
+      let deprecationMessage;
 
-    if (!moduleToExpose.type) {
-      moduleToExpose.type = isCommonJS ? 'commonjs' : 'amd';
-    } else if ((moduleToExpose.type === 'commonjs') !== isCommonJS) {
-      console.warn(`Provided module type does not match auto-detection result for module ${moduleToExpose.name}`);
-      console.warn('provided', moduleToExpose.type);
-      console.warn('detected', isCommonJS ? 'commonjs' : 'amd');
+      if (moduleToExpose.name === name) {
+        deprecationMessage = `Deprecated module usage: "${name}"`;
+      } else {
+        deprecationMessage = `Deprecated module alias "${name}" used. Please use real module name "${moduleToExpose.name}"`;
+      }
+
+      extra += DEPRECATION_PATTERN(this.options.deprecationMethodName, deprecationMessage);
     }
 
-    if (!DEFINE_EXPORTS_VALUES[moduleToExpose.type]) {
-      throw new Error(`Unsupported module type "${moduleToExpose.type}"`);
-    }
+    return DEFINE_PATTERN(name, moduleToExpose.definition, extra);
+  }
 
-    const deprecationMethodName = this.options.deprecationMethodName;
-    let deprecationCall = '';
+  _appendDefine (module, moduleToExpose) {
+    let appendix = [];
 
-    if (moduleToExpose.deprecated) {
-      let deprecationMsg = `Deprecated module usage: "${moduleToExpose.name}"`;
-
-      deprecationCall += `window.${deprecationMethodName} && ` +
-        `window.${deprecationMethodName}('${deprecationMsg}');`;
-    }
-
-    module._source._value += `\ndefine('${moduleToExpose.name}', function () {` +
-      ` ${deprecationCall}` +
-      ` return ${DEFINE_EXPORTS_VALUES[moduleToExpose.type]};` +
-      '});\n';
+    appendix.push(this._prepareStatement(moduleToExpose, moduleToExpose.name));
 
     if (moduleToExpose.aliases) {
       moduleToExpose.aliases.forEach((alias) => {
-        const deprecationMsg = `Deprecated module alias "${alias}" used. ` +
-          `Please use real module name "${moduleToExpose.name}"`;
-
-        deprecationCall += `window.${deprecationMethodName} && ` +
-          `window.${deprecationMethodName}('${deprecationMsg}');`;
-
-        module._source._value += `\ndefine('${alias}', function () {` +
-          ` ${deprecationCall}` +
-          ` return ${DEFINE_EXPORTS_VALUES[moduleToExpose.type]};` +
-          '});\n';
+        appendix.push(this._prepareStatement(moduleToExpose, alias));
       });
     }
+
+    module._source._value += appendix.join('');
   }
 }
 
