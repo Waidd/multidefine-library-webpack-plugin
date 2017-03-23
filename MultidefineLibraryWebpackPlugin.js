@@ -102,15 +102,11 @@ class MultidefineLibraryWebpacklugin {
   _prepareStatement (moduleToExpose, name) {
     let extra = '';
 
-    if (moduleToExpose.deprecated || moduleToExpose.name !== name) {
-      let deprecationMessage;
-
-      if (moduleToExpose.name === name) {
-        deprecationMessage = `Deprecated module usage: "${name}"`;
-      } else {
-        deprecationMessage = `Deprecated module alias "${name}" used. Please use real module name "${moduleToExpose.name}"`;
-      }
-
+    if (moduleToExpose.deprecated) {
+      let deprecationMessage = `Deprecated module usage: "${name}"`;
+      extra += DEPRECATION_PATTERN(this.options.deprecationMethodName, deprecationMessage);
+    } else if (moduleToExpose.name !== name) {
+      let deprecationMessage = `Deprecated module alias "${name}" used. Please use real module name "${moduleToExpose.name}"`;
       extra += DEPRECATION_PATTERN(this.options.deprecationMethodName, deprecationMessage);
     }
 
