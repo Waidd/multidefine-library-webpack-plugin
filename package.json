@@ -1,7 +1,7 @@
 {
   "name": "multidefine-library-webpack-plugin",
   "description": "This plugin allow webpack 2 to bundle your code to a named amd library with multiple entries in a same asset.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "author": "Thomas Cholley <cholley.t@gmail.com>",
   "contributors": [
     "Nicolas Deveaud <https://github.com/LeMisterV>"
