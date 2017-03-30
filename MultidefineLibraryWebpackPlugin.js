@@ -34,18 +34,16 @@ class MultidefineLibraryWebpacklugin {
   apply (compiler) {
     this.context = compiler.context;
     compiler.plugin('compilation', (compilation, data) => {
-      compilation.plugin('after-optimize-modules', (modules) => {
-        modules.forEach((module) => {
-          const modulePath = module.resource && this._getRelativePath(module.resource);
-          if (!modulePath) { return; }
+      compilation.plugin('succeed-module', (module) => {
+        const modulePath = module.resource && this._getRelativePath(module.resource);
+        if (!modulePath) { return; }
 
-          const moduleToExpose = this.modulesToExpose[modulePath];
-          if (!moduleToExpose) { return; }
+        const moduleToExpose = this.modulesToExpose[modulePath];
+        if (!moduleToExpose) { return; }
 
-          moduleToExpose.definition = this._detectModuleDefinition(module);
+        moduleToExpose.definition = this._detectModuleDefinition(module);
 
-          this._appendDefine(module, moduleToExpose);
-        });
+        this._appendDefine(module, moduleToExpose);
       });
     });
   }
