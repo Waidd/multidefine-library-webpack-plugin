@@ -65,7 +65,7 @@ This plugin support `amd`, `umd` and `commonjs` source module.
 ### First parameter: modules to expose
 
 The plugin take an array of objects as first parameter. Each object will represent an entry point of your asset:
-```json
+```javascript
 [{
   path: "a.js", // path to the file that you want to make requireable
   name: "A", // Define name of the module
@@ -75,9 +75,9 @@ The plugin take an array of objects as first parameter. Each object will represe
 ```
 
 This plugin can also take an object as parameter. Each key will represent an entry point of your asset:
-```json
+```javascript
 {
-  "a.js": { // path to the file that you want to make requireable 
+  "a.js": { // path to the file that you want to make requireable
     name: "A", // Define name of the module
     [aliases: ["alias1", "alias2"]] // alternate deprecated names exposed for this module
     [deprecated: true/false] // If deprecated, a global method "deprecated" is called is this module is used
